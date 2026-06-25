@@ -1,127 +1,226 @@
 # SBI Compass
 
-SBI Compass is an intelligent, event-driven digital banking recommendation platform. It aims to make digital banking contextual and engaging by understanding customer activity, history, and stated goals, and providing personalized financial guidance at the right moments.
+## Overview
 
-Additionally, SBI Compass serves as a policy navigator for bank staff, helping them quickly parse through extensive internal banking circulars and guidelines using AI.
+SBI Compass is a customer journey intelligence platform designed for digital banking. It processes customer events, maintains historical context, and generates timely recommendations based on user goals and account activity.
 
----
-
-## 🚀 Key Features
-
-*   **Goal Management:** Allow customers to define, track, and optimize their financial goals (e.g., buying a home, saving for education, retirement planning).
-*   **Contextual Recommendation Engine:** Event-driven recommendations triggered by real-time customer actions, transactions, and historical behavior.
-*   **AI Policy Navigator:** RAG-powered query interface for bank staff to search internal policies and guidelines.
-*   **Feedback Integration:** Active feedback loop where user actions (clicks, dismissals, ratings) continuously refine the recommendation algorithms.
-*   **Comprehensive Dashboards:** Tailored interfaces for customers (dashboard, recommendations history) and employees (policy search console).
+The system follows an event-driven architecture where every meaningful interaction is evaluated against existing context before a recommendation is presented. Recommendations are explainable, traceable, and subject to business rules before reaching the customer.
 
 ---
 
-## 📐 Architecture Diagram
+# Architecture
 
-SBI Compass follows an event-driven flow to ingest activities, compute signals, retrieve historical context, plan recommendations, apply bank policy validation rules, and capture feedback to close the loop.
+```mermaid
+flowchart TB
+
+    Customer[Customer Application]
+        --> API[Backend API]
+
+    API --> UserService[User Service]
+    API --> GoalService[Goal Service]
+    API --> TransactionService[Transaction Service]
+
+    UserService --> DB[(PostgreSQL)]
+    GoalService --> DB
+    TransactionService --> DB
+
+    TransactionService --> Events[Event Queue]
+
+    Events --> Observation[Observation Layer]
+    Observation --> Memory[Context Store]
+    Memory --> Planner[Planning Engine]
+    Planner --> Policy[Policy Validation]
+    Policy --> Recommendation[Recommendation Service]
+
+    Recommendation --> Dashboard[Dashboard]
+    Recommendation --> Notification[Notification Service]
+
+    Dashboard --> Feedback[Customer Feedback]
+    Feedback --> Memory
+```
+
+---
+
+# Request Lifecycle
 
 ```mermaid
 flowchart LR
 
-    Customer --> Backend
+    A[Customer Activity]
+        --> B[Create Event]
 
-    Backend --> Database
+    B --> C[Observation]
 
-    Backend --> Events
+    C --> D[Load Historical Context]
 
-    Events --> Observation
+    D --> E[Evaluate Current State]
 
-    Observation --> Context
+    E --> F[Generate Recommendation]
 
-    Context --> Planning
+    F --> G[Apply Business Rules]
 
-    Planning --> Policy
+    G --> H[Present to Customer]
 
-    Policy --> Recommendation
+    H --> I[Capture Feedback]
 
-    Recommendation --> Dashboard
+    I --> D
+```
 
-    Dashboard --> Feedback
+---
+
+# Components
+
+### Observation Layer
+
+Receives application events and converts them into structured signals such as:
+
+* Salary credited
+* Recurring payment detected
+* Goal updated
+* Spending category changed
+* Unusual transaction pattern
+
+### Context Store
+
+Maintains long-term information including:
+
+* Financial goals
+* Previous recommendations
+* Customer preferences
+* Historical feedback
+
+### Planning Engine
+
+Evaluates the current event together with historical context and determines the next recommended action.
+
+### Policy Validation
+
+Ensures recommendations satisfy internal business constraints before delivery.
+
+### Recommendation Service
+
+Publishes approved recommendations to customer-facing channels such as dashboards or notifications.
+
+---
+
+# Example Flow
+
+```mermaid
+sequenceDiagram
+
+    participant Customer
+    participant Backend
+    participant Observation
+    participant Context
+    participant Planner
+    participant Dashboard
+
+    Customer->>Backend: Salary credited
+
+    Backend->>Observation: Publish event
+
+    Observation->>Context: Retrieve customer history
+
+    Context-->>Planner: Goals and previous actions
+
+    Planner->>Dashboard: Generate recommendation
+
+    Customer->>Dashboard: Accept recommendation
+
+    Dashboard->>Context: Record feedback
+```
+
+---
+
+# Context Management
+
+```mermaid
+flowchart TD
+
+    Transactions --> Observation
+
+    Goals --> Context
+
+    Preferences --> Context
 
     Feedback --> Context
-```
 
-*For more detailed architecture notes, please refer to the [docs/architecture.md](docs/architecture.md) file.*
+    Observation --> Planner
+
+    Context --> Planner
+
+    Planner --> Recommendation
+
+    Recommendation --> Customer
+
+    Customer --> Feedback
+```
 
 ---
 
-## 🛠️ Tech Stack
+# Governance
 
-### Frontend
-*   **Next.js** (App Router, React)
-*   **TypeScript**
-*   **Tailwind CSS** (for styling)
+```mermaid
+flowchart TD
 
-### Backend
-*   **Go** (Gin Web Framework)
-*   **PostgreSQL** (Transactional and user database)
-*   **Redis** (Fast caching and event queueing)
+    Recommendation --> Consent{Consent Available?}
 
-### AI Service
-*   **Python** (FastAPI)
-*   **LLM Integration** (RAG pipeline for policy circulars and planning state)
+    Consent -->|No| Skip[Do Not Display]
+
+    Consent -->|Yes| Rules{Business Rules}
+
+    Rules -->|Fail| Suppress[Suppress]
+
+    Rules -->|Pass| Display[Display Recommendation]
+```
 
 ---
 
-## 📂 Folder Structure
+# Technology Stack
 
-```
+| Layer          | Implementation      |
+| -------------- | ------------------- |
+| Frontend       | Next.js, TypeScript |
+| Backend        | Go (Gin)            |
+| Data Store     | PostgreSQL          |
+| Cache          | Redis               |
+| AI Service     | Python (FastAPI)    |
+| Vector Storage | pgvector            |
+| Authentication | JWT                 |
+| Deployment     | Docker              |
+
+---
+
+# Repository Structure
+
+```text
 sbi-compass/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── docs/
-│   ├── architecture.md
-│   ├── problem-statement.md
-│   └── diagrams/
-│       └── architecture.png (optional)
 ├── frontend/
-│   └── README.md
 ├── backend/
-│   └── README.md
 ├── ai-service/
-│   └── README.md
+├── docs/
+├── infrastructure/
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
-## 💻 Setup Instructions (WIP)
+# Development Roadmap
 
-> [!NOTE]
-> This project is currently in the initial scaffolding and architectural design phase. Full local setup commands will be finalized as components are built.
-
-### Prerequisites
-*   Node.js (v18+) & npm (for Frontend)
-*   Go (v1.20+) (for Backend)
-*   Python (v3.10+) (for AI Service)
-*   Docker & Docker Compose (to spin up PostgreSQL and Redis instances)
-
-### Step 1: Clone the Repository
-```bash
-git clone https://github.com/GhanshyamJha05/SBI-Compass.git
-cd SBI-Compass
-```
-
-### Step 2: Running Components
-Refer to individual README files in each subdirectory:
-*   [Frontend Setup](frontend/README.md)
-*   [Backend Setup](backend/README.md)
-*   [AI Service Setup](ai-service/README.md)
+* Initial project setup
+* Event ingestion pipeline
+* Context storage
+* Recommendation engine
+* Customer dashboard
+* Administrative reporting
+* Deployment pipeline
 
 ---
 
-## 🗺️ Roadmap
+# Notes
 
-- [x] Define project scope
-- [x] Complete architecture
-- [ ] Build backend services
-- [ ] Implement event processing
-- [ ] Add planning engine
-- [ ] Build frontend dashboard
-- [ ] Integrate recommendation workflow
-- [ ] Deploy prototype
+* Customer consent is required before generating personalized recommendations.
+* Feedback from previous interactions influences future recommendations.
+* Recommendations are evaluated against policy rules before presentation.
+* The platform is designed to support incremental feature additions without changing the overall architecture.
